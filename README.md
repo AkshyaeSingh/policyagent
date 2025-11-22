@@ -75,4 +75,80 @@ Negotiation Theater: Live visualization of agents negotiating
 
 Outcome Simulation: Show predicted effects of different policies
 
+## Quick Start
+
+### User-Agent Interaction API Setup
+
+1. Navigate to the user-agent-api directory:
+```bash
+cd user-agent-api
+```
+
+2. Install dependencies:
+```bash
+pip install -e .
+```
+
+3. Create a `.env` file with your OpenRouter API key:
+```
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+4. Run the API server:
+```bash
+python main.py
+```
+
+The API will be available at `http://localhost:8001`
+
+**Note:** The `backend` folder is reserved for agent-agent interactions and should not be modified.
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+The frontend will be available at `http://localhost:5173`
+
+### Usage
+
+1. Enter participant name and role (e.g., "Alice", "Noise-Sensitive neighbor")
+2. Start chatting with the agent about your preferences and concerns
+3. Click "Extract Preferences" to generate structured output
+4. The output will be formatted as shown in the example, ready to send to your coworker for agent-agent analysis
+
+## Project Structure
+
+- `backend/` - Reserved for agent-agent interactions (do not modify)
+- `user-agent-api/` - User-to-agent interaction API with OpenRouter integration
+- `frontend/` - React frontend for user interaction
+
+### Output Format
+
+The system outputs structured preferences in the format:
+```
+PARTICIPANTS:
+
+Participant Name (Role):
+  - preference_key_1: value_or_None
+  - preference_key_2: value_or_None
+```
+
+Values can be:
+- `float` for numeric values (e.g., `250000.0`, `60.0`)
+- `str` for text/dates (e.g., `"2026-06-01"`, `"8am"`)
+- `None` if mentioned but no specific value given
+
 
