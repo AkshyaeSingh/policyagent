@@ -32,7 +32,7 @@ function InitialInput({ onSubmit }) {
       <div className="initial-input-container">
         <div className="header">
           <h1>Policy Agent</h1>
-          <p>Tell us about yourself</p>
+          <p>Airborne Virus Crisis - Tell us about yourself</p>
         </div>
 
         <form onSubmit={handleSubmit} className="input-form">
@@ -49,21 +49,29 @@ function InitialInput({ onSubmit }) {
 
           <div className="input-group">
             <label>Your Role</label>
-            <input
-              type="text"
+            <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              placeholder="e.g., Noise-Sensitive neighbor"
               required
-            />
+            >
+              <option value="">Select your role...</option>
+              <option value="Business_Owner">Business Owner (restaurant/retail)</option>
+              <option value="Healthcare_Worker">Healthcare Worker (immunocompromised)</option>
+              <option value="Parent">Parent (school-age children)</option>
+              <option value="Essential_Worker">Essential Worker (grocery/transit)</option>
+              <option value="Remote_Worker">Remote Worker (tech)</option>
+              <option value="Elderly_Resident">Elderly Resident (high-risk)</option>
+              <option value="Small_Landlord">Small Landlord (property owner)</option>
+              <option value="Young_Adult">Young Adult (social/nightlife)</option>
+            </select>
           </div>
 
           <div className="input-group">
-            <label>How does this issue affect you?</label>
+            <label>How does this crisis affect you?</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your situation and concerns. For example: 'I live next to the proposed construction site and I'm concerned about noise levels, especially in the mornings when I work from home.'"
+              placeholder="Describe your situation and concerns in the context of an airborne virus crisis. For example: 'I own a restaurant and I'm worried about capacity restrictions affecting my revenue, but I also want to keep my customers safe.'"
               rows="5"
               required
             />

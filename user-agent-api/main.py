@@ -76,7 +76,7 @@ class FinalizePreferencesRequest(BaseModel):
     answers: List[Dict[str, Any]]
 
 
-async def call_openrouter(messages: List[Dict[str, str]], model: str = "anthropic/claude-3.5-sonnet") -> str:
+async def call_openrouter(messages: List[Dict[str, str]], model: str = "x-ai/grok-beta-fast") -> str:
     """Call OpenRouter API"""
     if not OPENROUTER_API_KEY:
         raise HTTPException(status_code=500, detail="OpenRouter API key not configured")
@@ -307,7 +307,77 @@ class GenerateNextQuestionRequest(BaseModel):
     user_description: str
     previous_answers: List[Dict[str, Any]]
     current_preferences: Dict[str, Any]
+    policy_dimensions: Dict[str, Any]
     question_count: int
+
+
+# Policy Dimensions for airborne virus scenario
+POLICY_DIMENSIONS = {
+    "indoor_capacity_limit": (0, 100),
+    "outdoor_capacity_limit": (0, 100),
+    "social_distance_required_feet": (0, 10),
+    "ventilation_standard_ACH": (0, 12),
+    "business_curfew_hour": (18, 24),
+    "essential_business_hours_only": (0, 1),
+    "phased_reopening_weeks": (0, 52),
+    "mask_mandate_level": (0, 4),
+    "mask_provision_budget_per_person": (0, 50),
+    "ppe_subsidy_percentage": (0, 100),
+    "testing_frequency_requirement": (0, 7),
+    "contact_tracing_level": (0, 3),
+    "isolation_support_daily_amount": (0, 200),
+    "quarantine_enforcement_level": (0, 3),
+    "business_subsidy_percentage": (0, 80),
+    "unemployment_bonus_weekly": (0, 600),
+    "rent_relief_percentage": (0, 100),
+    "essential_worker_hazard_pay": (0, 10),
+    "travel_restriction_level": (0, 4),
+    "essential_activities_list_restrictiveness": (0, 10),
+    "exercise_allowance_hours": (0, 24),
+    "household_mixing_allowed": (0, 3),
+    "vaccine_mandate_sectors": (0, 10),
+    "vaccine_priority_tiers": (1, 10),
+    "treatment_rationing_criteria": (0, 3),
+    "medical_resource_redistribution": (0, 1),
+    "transparency_level": (0, 10),
+    "update_frequency_hours": (1, 168),
+    "misinformation_penalty_severity": (0, 5),
+    "community_input_weight": (0, 1),
+}
+
+# Policy dimension units for display
+DIMENSION_UNITS = {
+    "indoor_capacity_limit": "%",
+    "outdoor_capacity_limit": "%",
+    "social_distance_required_feet": "feet",
+    "ventilation_standard_ACH": "ACH",
+    "business_curfew_hour": "hour (24h format)",
+    "essential_business_hours_only": "binary (0/1)",
+    "phased_reopening_weeks": "weeks",
+    "mask_mandate_level": "level (0-4)",
+    "mask_provision_budget_per_person": "$",
+    "ppe_subsidy_percentage": "%",
+    "testing_frequency_requirement": "times/week",
+    "contact_tracing_level": "level (0-3)",
+    "isolation_support_daily_amount": "$/day",
+    "quarantine_enforcement_level": "level (0-3)",
+    "business_subsidy_percentage": "%",
+    "unemployment_bonus_weekly": "$/week",
+    "rent_relief_percentage": "%",
+    "essential_worker_hazard_pay": "$/hour",
+    "travel_restriction_level": "level (0-4)",
+    "essential_activities_list_restrictiveness": "level (0-10)",
+    "exercise_allowance_hours": "hours/day",
+    "household_mixing_allowed": "households",
+    "vaccine_mandate_sectors": "sectors",
+    "vaccine_priority_tiers": "tier (1-10)",
+    "treatment_rationing_criteria": "level (0-3)",
+    "medical_resource_redistribution": "binary (0/1)",
+    "transparency_level": "level (0-10)",
+    "update_frequency_hours": "hours",
+    "misinformation_penalty_severity": "level (0-5)",
+    "community_input_weight": "weight (0-1)",
+}
 
 
 @app.post("/api/generate-next-question")
@@ -318,8 +388,8 @@ async def generate_next_question(request: GenerateNextQuestionRequest):
         answers_text = ""
         if request.previous_answers:
             answers_text = "\n".join([
-                f"Q: {ans.get('question', '')}\nA: {ans.get('answer', '')}"
-                for ans in request.previous_answers[-5:]  # Last 5 answers for context
+                f"Q: {ans.get('question', {}).get('text', '') if isinstance(ans.get('question'), dict) else ans.get('question', '')}\nA: {ans.get('answer', '')}"
+                for ans in request.previous_answers[-5:]
             ])
         
         preferences_text = ""
@@ -329,59 +399,180 @@ async def generate_next_question(request: GenerateNextQuestionRequest):
                 for key, value in request.current_preferences.items()
             ])
         
-        prompt = f"""You are generating the NEXT question to understand a user's policy preferences.
+        policy_dimensions_text = ""
+        if request.policy_dimensions:
+            policy_dimensions_text = "\n".join([
+                f"- {key}: {value}"
+                for key, value in request.policy_dimensions.items()
+            ])
+        
+        # Get relevant policy dimensions for this user role
+        role_dimension_mapping = {
+            "Business_Owner": ["indoor_capacity_limit", "business_subsidy_percentage", "mask_mandate_level", "business_curfew_hour"],
+            "Healthcare_Worker": ["mask_mandate_level", "ventilation_standard_ACH", "ppe_subsidy_percentage", "testing_frequency_requirement"],
+            "Parent": ["school_format_preference", "child_mask_tolerance", "testing_frequency_requirement", "vaccine_mandate_sectors"],
+            "Essential_Worker": ["essential_worker_hazard_pay", "ppe_subsidy_percentage", "testing_frequency_requirement", "sick_leave_days"],
+            "Remote_Worker": ["travel_restriction_level", "lockdown_strictness", "public_space_restrictions"],
+            "Elderly_Resident": ["isolation_support_daily_amount", "priority_delivery", "vaccine_priority_tiers"],
+            "Small_Landlord": ["rent_relief_percentage", "eviction_moratorium", "property_tax_relief"],
+            "Young_Adult": ["gathering_size_limit", "bar_closure_hour", "event_cancellation_tolerance"],
+        }
+        
+        relevant_dimensions = role_dimension_mapping.get(request.user_role, list(POLICY_DIMENSIONS.keys())[:10])
+        
+        prompt = f"""You are generating questions for an AIRBORNE VIRUS CRISIS scenario requiring rapid coordination between individual autonomy and collective safety.
+
+CONTEXT: We're in a crisis requiring rapid coordination. Users express preferences that map to policy dimensions.
 
 User Information:
 - Name: {request.user_name}
 - Role: {request.user_role}
-- Initial Description: {request.user_description}
+- Description: {request.user_description}
 
-Previous Answers ({len(request.previous_answers)} answered so far):
+Previous Answers ({len(request.previous_answers)} answered):
 {answers_text if answers_text else "None yet"}
 
-Current Extracted Preferences:
+Current Preferences Extracted:
 {preferences_text if preferences_text else "None yet"}
 
-Generate ONE new question that:
-1. Builds on what you've learned from previous answers
-2. Explores areas not yet covered
-3. Gets more specific based on their revealed preferences
-4. Helps extract concrete values (numbers, dates, constraints)
-5. Is relevant to their role: {request.user_role}
+Current Policy Dimensions Mapped:
+{policy_dimensions_text if policy_dimensions_text else "None yet"}
 
-The question should be:
-- One clear sentence
-- Focused on a specific policy trade-off or preference
-- Not repetitive of previous questions
-- Designed to extract a specific preference value if possible
+Relevant Policy Dimensions for {request.user_role}:
+{', '.join(relevant_dimensions)}
 
-Examples:
-- "You'd accept a 10-story building on your block if it meant 20% lower rents"
-- "You care specifically about noise during the morning"
-- "What's the minimum compensation you'd accept for construction inconveniences?"
+Generate ONE question that helps fill in missing policy dimensions. Focus on questions relevant to {request.user_role} in a virus crisis.
 
-Output ONLY the question as a plain string (no JSON, no quotes, just the question text).
-If you have enough information to extract all preferences, output: "COMPLETE" """
+QUESTION TYPES AND FORMATS:
+
+1. "trade_off" - For comparing two scenarios (swipe left/right)
+   MUST include option_A and option_B objects with caption:
+   {{
+     "type": "trade_off",
+     "question": "Which world would you prefer?",
+     "option_A": {{
+       "caption": "Restaurants at 75% capacity, 50 new cases daily"
+     }},
+     "option_B": {{
+       "caption": "Restaurants at 25% capacity, 5 new cases daily"
+     }},
+     "reveals": ["indoor_capacity_limit", "risk_tolerance"]
+   }}
+
+2. "slider" - For ranking/preference intensity (0-100 slider)
+   MUST include range and unit:
+   {{
+     "type": "slider",
+     "question": "You're at a grocery store. How many people is too crowded?",
+     "range": [5, 50],
+     "unit": "people",
+     "reveals": ["personal_space_requirement", "risk_tolerance"]
+   }}
+
+3. "numerical" - For specific numbers with units (multiple choice options)
+   MUST include options array with units:
+   {{
+     "type": "numerical",
+     "question": "Maximum indoor capacity you'd accept for your business?",
+     "options": ["25%", "50%", "75%", "100%"],
+     "unit": "percentage",
+     "reveals": ["indoor_capacity_limit"]
+   }}
+
+4. "yes_no" - For binary choices (swipe left/right)
+   {{
+     "type": "yes_no",
+     "question": "Your favorite bar requires proof of vaccination to enter",
+     "context": "But your friend group is split on vaccination",
+     "reveals": ["vaccine_mandate_support", "social_priority"]
+   }}
+
+5. "allocation" - For budget/resource distribution (slider bars that sum to constraint)
+   MUST include options array and constraint:
+   {{
+     "type": "allocation",
+     "question": "You have $100 in tax money to allocate:",
+     "options": ["Business subsidies to stay open", "Free masks and tests for everyone", "Hazard pay for essential workers", "Unemployment benefits", "Hospital capacity expansion"],
+     "constraint": 100,
+     "reveals": ["economic_priority", "safety_priority"]
+   }}
+
+IMPORTANT:
+- For trade_off: MUST include option_A and option_B objects (not just strings)
+- For numerical: MUST provide 3-5 options with units
+- For slider: MUST provide range [min, max] and unit
+- For allocation: MUST provide options array and constraint number
+- Questions MUST be specific to virus crisis and {request.user_role} role
+- Focus on filling missing policy dimensions from: {', '.join(relevant_dimensions)}
+
+Output ONLY valid JSON. If you have enough information, output: {{"complete": true}}
+
+Generate the question now:"""
 
         messages = [
-            {"role": "system", "content": "You are an adaptive question generation system. Generate one question at a time based on what you've learned."},
+            {"role": "system", "content": "You are a question generation system for virus crisis policy preferences. Output only valid JSON."},
             {"role": "user", "content": prompt}
         ]
         
-        response_text = await call_openrouter(messages, model="anthropic/claude-3.5-sonnet")
+        response_text = await call_openrouter(messages)
         response_text = response_text.strip()
         
-        # Remove quotes if present
-        if response_text.startswith('"') and response_text.endswith('"'):
-            response_text = response_text[1:-1]
-        if response_text.startswith("'") and response_text.endswith("'"):
-            response_text = response_text[1:-1]
+        # Parse JSON
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
         
-        # Check if AI says we're complete
-        if "COMPLETE" in response_text.upper() or request.question_count >= 12:
-            return {"complete": True, "question": None}
-        
-        return {"question": response_text, "complete": False}
+        try:
+            question_data = json.loads(response_text)
+            if question_data.get("complete"):
+                return {"complete": True, "question": None}
+            
+            return {
+                "question": question_data,
+                "complete": False
+            }
+        except json.JSONDecodeError:
+            # Fallback - generate a role-appropriate question
+            fallback_questions = {
+                "Business_Owner": {
+                    "type": "trade_off",
+                    "question": "Which scenario would you prefer?",
+                    "option_A": {"caption": "Restaurants at 75% capacity, 50 new cases daily"},
+                    "option_B": {"caption": "Restaurants at 25% capacity, 5 new cases daily"},
+                    "reveals": ["indoor_capacity_limit"]
+                },
+                "Healthcare_Worker": {
+                    "type": "slider",
+                    "question": "What's the minimum mask compliance rate you'd accept?",
+                    "range": [50, 100],
+                    "unit": "%",
+                    "reveals": ["min_mask_compliance_rate"]
+                },
+                "Parent": {
+                    "type": "yes_no",
+                    "question": "Should schools require masks for children?",
+                    "reveals": ["child_mask_tolerance"]
+                },
+                "Essential_Worker": {
+                    "type": "numerical",
+                    "question": "What's the minimum hazard pay you'd need?",
+                    "options": ["$2/hour", "$5/hour", "$8/hour", "$10/hour"],
+                    "unit": "$/hour",
+                    "reveals": ["hazard_pay_minimum"]
+                },
+            }
+            
+            fallback = fallback_questions.get(request.user_role, {
+                "type": "yes_no",
+                "question": "Should masks be required in indoor public spaces?",
+                "reveals": ["mask_mandate_level"]
+            })
+            
+            return {
+                "question": fallback,
+                "complete": False
+            }
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating next question: {str(e)}")
@@ -393,11 +584,11 @@ async def update_preferences(request: UpdatePreferencesRequest):
     try:
         # Build context from user info and answers
         answers_text = "\n".join([
-            f"Q: {ans.get('question', '')}\nA: {ans.get('answer', '')}"
+            f"Q: {ans.get('question', {}).get('text', '') if isinstance(ans.get('question'), dict) else ans.get('question', '')}\nA: {ans.get('answer', '')}\nType: {ans.get('question', {}).get('type', 'unknown') if isinstance(ans.get('question'), dict) else 'unknown'}"
             for ans in request.answers
         ])
         
-        prompt = f"""Based on the user's initial description and their answers so far, extract their preferences.
+        prompt = f"""You are extracting preferences for an AIRBORNE VIRUS CRISIS scenario.
 
 User: {request.user_name} ({request.user_role})
 Initial Description: {request.user_description}
@@ -405,16 +596,38 @@ Initial Description: {request.user_description}
 Answers so far:
 {answers_text}
 
-Extract preferences as key-value pairs. Use descriptive snake_case keys.
+Available Policy Dimensions:
+{json.dumps(list(POLICY_DIMENSIONS.keys()), indent=2)}
+
+Extract preferences and map them to policy dimensions. For each answer:
+1. Extract the user's preference value
+2. Map it to relevant policy dimensions
+3. Convert to appropriate types (float for numbers, string for categories, boolean for yes/no)
+
+Example mappings:
+- "75% capacity" → {{"indoor_capacity_limit": 75.0}}
+- "mask required" → {{"mask_mandate_level": 3.0}}
+- "$5000 subsidy" → {{"business_subsidy_percentage": 25.0}}
+- "hazard pay $5/hour" → {{"essential_worker_hazard_pay": 5.0}}
+
 Output ONLY JSON:
-{{"preferences": {{"key": value_or_null}}}}"""
+{{
+  "preferences": {{
+    "preference_key": value
+  }},
+  "policy_dimensions": {{
+    "dimension_key": value
+  }}
+}}
+
+Use role-appropriate preference keys from stakeholder examples."""
 
         messages = [
-            {"role": "system", "content": "You are a preference extraction system. Output only valid JSON."},
+            {"role": "system", "content": "You are a preference extraction system for virus crisis policy. Map preferences to policy dimensions. Output only valid JSON."},
             {"role": "user", "content": prompt}
         ]
         
-        response_text = await call_openrouter(messages, model="anthropic/claude-3.5-sonnet")
+        response_text = await call_openrouter(messages)
         
         # Parse JSON
         response_text = response_text.strip()
@@ -426,13 +639,16 @@ Output ONLY JSON:
         try:
             extracted_data = json.loads(response_text)
             preferences = extracted_data.get("preferences", {})
+            policy_dimensions = extracted_data.get("policy_dimensions", {})
         except json.JSONDecodeError:
             preferences = {}
+            policy_dimensions = {}
         
         # Log to console (backend side, not shown to user)
         print(f"\n{'='*60}")
         print(f"LIVE PREFERENCE UPDATE for {request.user_name} ({request.user_role})")
         print(f"After {len(request.answers)} answers:")
+        print("\nUser Preferences:")
         for key, value in preferences.items():
             if value is None:
                 print(f"  - {key}: None")
@@ -440,10 +656,22 @@ Output ONLY JSON:
                 print(f"  - {key}: {float(value)}")
             else:
                 print(f"  - {key}: {value}")
+        
+        if policy_dimensions:
+            print("\nPolicy Dimensions Mapped:")
+            for key, value in policy_dimensions.items():
+                unit = DIMENSION_UNITS.get(key, "")
+                if value is None:
+                    print(f"  - {key}: None {unit}".strip())
+                elif isinstance(value, (int, float)):
+                    print(f"  - {key}: {float(value)} {unit}".strip())
+                else:
+                    print(f"  - {key}: {value} {unit}".strip())
         print(f"{'='*60}\n")
         
         return {
             "preferences": preferences,
+            "policy_dimensions": policy_dimensions,
             "participant_name": request.user_name,
             "role": request.user_role
         }
@@ -458,11 +686,11 @@ async def finalize_preferences(request: FinalizePreferencesRequest):
     try:
         # Build full context
         answers_text = "\n".join([
-            f"Q: {ans.get('question', '')}\nA: {ans.get('answer', '')}"
+            f"Q: {ans.get('question', {}).get('text', '') if isinstance(ans.get('question'), dict) else ans.get('question', '')}\nA: {ans.get('answer', '')}\nType: {ans.get('question', {}).get('type', 'unknown') if isinstance(ans.get('question'), dict) else 'unknown'}"
             for ans in request.answers
         ])
         
-        prompt = f"""Extract the final, complete preferences from this user's input.
+        prompt = f"""You are finalizing preferences for an AIRBORNE VIRUS CRISIS scenario.
 
 User: {request.user_name} ({request.user_role})
 Initial Description: {request.user_description}
@@ -470,20 +698,37 @@ Initial Description: {request.user_description}
 All Answers:
 {answers_text}
 
-Extract ALL preferences mentioned. Be thorough and specific.
-- Use descriptive snake_case keys (e.g., "noise_level_below_db", "compensation_minimum")
-- Values: float for numbers, string for text/dates, None if mentioned but no value
-- Include all constraints, requirements, and priorities
+Available Policy Dimensions:
+{json.dumps(list(POLICY_DIMENSIONS.keys()), indent=2)}
+
+Extract ALL final preferences and map them to policy dimensions. Be thorough and specific.
+
+For preferences, use role-appropriate keys:
+- Business_Owner: max_capacity_reduction, mask_requirement_acceptance, air_filtration_investment, revenue_loss_tolerance, compensation_required_monthly, delivery_pivot_capability, outdoor_space_available
+- Healthcare_Worker: min_mask_compliance_rate, min_air_changes_per_hour, max_acceptable_case_rate, work_from_home_requirement, priority_medical_access, isolation_support_needed
+- Parent: school_format_preference, child_mask_tolerance_hours, activity_restriction_acceptance, childcare_subsidy_needed, testing_frequency_acceptable, vaccine_requirement_support
+- Essential_Worker: hazard_pay_minimum, ppe_provision_required, sick_leave_days_needed, testing_provided_frequency, transport_subsidy_needed, shift_flexibility_needed
+- Remote_Worker: lockdown_strictness_acceptable, tax_increase_tolerance, public_space_restrictions_acceptable, delivery_service_dependence, gym_closure_tolerance_weeks, travel_restriction_tolerance
+- Elderly_Resident: isolation_support_hours_weekly, priority_delivery_access, medical_appointment_transport, social_interaction_minimum_weekly, vaccination_priority_level, community_space_safety_requirement
+- Small_Landlord: rent_freeze_tolerance_months, eviction_moratorium_acceptance, property_tax_relief_needed, maintenance_delay_acceptable, tenant_support_contribution, commercial_tenant_flexibility
+- Young_Adult: gathering_size_limit_acceptable, bar_closure_hour_acceptable, event_cancellation_tolerance, mask_wearing_situations, testing_for_events_acceptable, vaccine_passport_support
 
 Output ONLY JSON:
-{{"preferences": {{"key": value_or_null}}}}"""
+{{
+  "preferences": {{
+    "preference_key": value
+  }},
+  "policy_dimensions": {{
+    "dimension_key": value
+  }}
+}}"""
 
         messages = [
-            {"role": "system", "content": "You are a preference extraction system. Output only valid JSON."},
+            {"role": "system", "content": "You are a preference extraction system for virus crisis policy. Map preferences to policy dimensions. Output only valid JSON."},
             {"role": "user", "content": prompt}
         ]
         
-        response_text = await call_openrouter(messages, model="anthropic/claude-3.5-sonnet")
+        response_text = await call_openrouter(messages)
         
         # Parse JSON
         response_text = response_text.strip()
@@ -495,8 +740,10 @@ Output ONLY JSON:
         try:
             extracted_data = json.loads(response_text)
             preferences = extracted_data.get("preferences", {})
+            policy_dimensions = extracted_data.get("policy_dimensions", {})
         except json.JSONDecodeError:
             preferences = {}
+            policy_dimensions = {}
         
         # Format output
         participant_prefs = ParticipantPreferences(
@@ -524,12 +771,23 @@ Output ONLY JSON:
         print(f"\n{'='*60}")
         print("FINAL PREFERENCES OUTPUT:")
         print(formatted_output)
+        if policy_dimensions:
+            print("\nPOLICY DIMENSIONS MAPPED:")
+            for key, value in policy_dimensions.items():
+                unit = DIMENSION_UNITS.get(key, "")
+                if value is None:
+                    print(f"  - {key}: None {unit}".strip())
+                elif isinstance(value, (int, float)):
+                    print(f"  - {key}: {float(value)} {unit}".strip())
+                else:
+                    print(f"  - {key}: {value} {unit}".strip())
         print(f"{'='*60}\n")
         
         return {
             "participant_name": request.user_name,
             "role": request.user_role,
             "preferences": preferences,
+            "policy_dimensions": policy_dimensions,
             "formatted_output": formatted_output,
             "json_output": output.model_dump()
         }

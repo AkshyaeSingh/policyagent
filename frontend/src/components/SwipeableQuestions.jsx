@@ -8,6 +8,7 @@ function SwipeableQuestions({ userInfo, onComplete }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isGeneratingNext, setIsGeneratingNext] = useState(false)
   const [preferences, setPreferences] = useState({})
+  const [policyDimensions, setPolicyDimensions] = useState({})
   const [questionCount, setQuestionCount] = useState(0)
   const MAX_QUESTIONS = 12
 
@@ -43,7 +44,11 @@ function SwipeableQuestions({ userInfo, onComplete }) {
       const data = await response.json()
       
       if (data.question) {
-        setCurrentQuestion(data.question)
+        // Ensure question is an object with type
+        const questionObj = typeof data.question === 'string' 
+          ? { type: 'yes_no', question: data.question }
+          : data.question
+        setCurrentQuestion(questionObj)
         setIsLoading(false)
         setIsGeneratingNext(false)
       } else if (data.complete) {
@@ -55,7 +60,7 @@ function SwipeableQuestions({ userInfo, onComplete }) {
     } catch (error) {
       console.error('Error generating question:', error)
       // Fallback question
-      setCurrentQuestion("You care about the noise of the construction site")
+      setCurrentQuestion({ type: 'yes_no', question: "Should masks be required in indoor public spaces?" })
       setIsLoading(false)
       setIsGeneratingNext(false)
     }
@@ -90,11 +95,12 @@ function SwipeableQuestions({ userInfo, onComplete }) {
     }
   }
 
-  const handleAnswer = async (answer, sliderValue = null) => {
+  const handleAnswer = async (answerType, answerData = {}) => {
     const newAnswer = {
       question: currentQuestion,
-      answer: answer,
-      slider_value: sliderValue,
+      answer: answerData.answer || answerType,
+      answer_type: answerType,
+      slider_value: answerData.value,
       timestamp: new Date().toISOString(),
     }
     const newAnswers = [...answers, newAnswer]
@@ -126,6 +132,7 @@ function SwipeableQuestions({ userInfo, onComplete }) {
           user_description: userInfo.description,
           previous_answers: newAnswers,
           current_preferences: updatedPrefs,
+          policy_dimensions: policyDimensions,
           question_count: newCount,
         }),
       })
@@ -140,7 +147,11 @@ function SwipeableQuestions({ userInfo, onComplete }) {
         // AI determined we have enough information
         finalizePreferences(newAnswers)
       } else if (data.question) {
-        setCurrentQuestion(data.question)
+        // Ensure question is an object with type
+        const questionObj = typeof data.question === 'string' 
+          ? { type: 'yes_no', question: data.question }
+          : data.question
+        setCurrentQuestion(questionObj)
         setIsGeneratingNext(false)
       } else {
         throw new Error('No question generated')
@@ -148,7 +159,7 @@ function SwipeableQuestions({ userInfo, onComplete }) {
     } catch (error) {
       console.error('Error generating next question:', error)
       // Fallback question
-      setCurrentQuestion("You care about the noise of the construction site")
+      setCurrentQuestion({ type: 'yes_no', question: "Should masks be required in indoor public spaces?" })
       setIsGeneratingNext(false)
     }
   }

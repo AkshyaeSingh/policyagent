@@ -151,3 +151,183 @@
   color: white;
 }
 
+/* Trade-off question styles */
+.trade-off-question {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.trade-off-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.option {
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.option-a {
+  background: #ffe0e0;
+  border: 2px solid #ff6b6b;
+}
+
+.option-b {
+  background: #e0ffe0;
+  border: 2px solid #51cf66;
+}
+
+.option-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.option-text {
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.option-divider {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #667eea;
+}
+
+.swipe-hint {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 15px;
+  font-style: italic;
+}
+
+/* Numerical question styles */
+.numerical-question {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.option-button {
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  background: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option-button:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.option-button.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+}
+
+/* Yes/No question styles */
+.yes-no-question {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.question-context {
+  font-size: 1rem;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* Allocation question styles */
+.allocation-question {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.allocation-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.allocation-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.allocation-item label {
+  flex: 1;
+  font-size: 0.95rem;
+  color: #333;
+  min-width: 120px;
+}
+
+.allocation-slider {
+  flex: 2;
+  height: 6px;
+}
+
+.allocation-value {
+  min-width: 40px;
+  text-align: right;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.allocation-total {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 10px;
+  background: #f0f4ff;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.allocation-submit {
+  padding: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.allocation-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slider-value {
+  font-weight: 700;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
