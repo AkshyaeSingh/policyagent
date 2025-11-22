@@ -1,0 +1,77 @@
+.splash-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: #000;
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.app-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 30px 0;
+  color: white;
+  letter-spacing: 2px;
+}
+
+.typewriter-container {
+  min-height: 200px;
+  margin: 40px 0;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.typewriter-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: left;
+}
+
+.cursor {
+  display: inline-block;
+  animation: blink 1s infinite;
+  color: white;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.enter-button {
+  margin-top: 40px;
+  padding: 18px 50px;
+  background: white;
+  color: #000;
+  border: none;
+  border-radius: 30px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  letter-spacing: 1px;
+}
+
+.enter-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
+}
+
+.enter-button:active {
+  transform: translateY(0);
+}

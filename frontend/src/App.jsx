@@ -1,15 +1,20 @@
 import { useState } from 'react'
-import InitialInput from './components/InitialInput'
-import SwipeableQuestions from './components/SwipeableQuestions'
+import SplashScreen from './components/SplashScreen'
+import VoiceInput from './components/VoiceInput'
+import QuestionFlow from './components/QuestionFlow'
 import './App.css'
 
 function App() {
-  const [step, setStep] = useState('initial') // 'initial' | 'questions' | 'complete'
-  const [userInfo, setUserInfo] = useState(null)
+  const [step, setStep] = useState('splash') // 'splash' | 'voice' | 'questions' | 'complete'
+  const [userDescription, setUserDescription] = useState('')
   const [preferences, setPreferences] = useState(null)
 
-  const handleInitialSubmit = (info) => {
-    setUserInfo(info)
+  const handleSplashComplete = () => {
+    setStep('voice')
+  }
+
+  const handleVoiceComplete = (description) => {
+    setUserDescription(description)
     setStep('questions')
   }
 
@@ -20,12 +25,15 @@ function App() {
 
   return (
     <div className="app">
-      {step === 'initial' && (
-        <InitialInput onSubmit={handleInitialSubmit} />
+      {step === 'splash' && (
+        <SplashScreen onComplete={handleSplashComplete} />
+      )}
+      {step === 'voice' && (
+        <VoiceInput onComplete={handleVoiceComplete} />
       )}
       {step === 'questions' && (
-        <SwipeableQuestions
-          userInfo={userInfo}
+        <QuestionFlow
+          userDescription={userDescription}
           onComplete={handleQuestionsComplete}
         />
       )}
@@ -34,8 +42,8 @@ function App() {
           <h1>✓ Preferences Captured!</h1>
           <p>Your preferences have been extracted and are ready for analysis.</p>
           <button onClick={() => {
-            setStep('initial')
-            setUserInfo(null)
+            setStep('splash')
+            setUserDescription('')
             setPreferences(null)
           }}>Start Over</button>
         </div>

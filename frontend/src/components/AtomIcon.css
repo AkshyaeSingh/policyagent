@@ -1,0 +1,63 @@
+.atom-icon {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+}
+
+.atom-ring {
+  position: absolute;
+  border: 3px solid white;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+}
+
+.ring-1 {
+  width: 100px;
+  height: 100px;
+  margin: -50px 0 0 -50px;
+  animation: rotate 8s linear infinite;
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.ring-2 {
+  width: 80px;
+  height: 80px;
+  margin: -40px 0 0 -40px;
+  animation: rotate 6s linear infinite reverse;
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: rotateX(60deg);
+}
+
+.ring-3 {
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  animation: rotate 10s linear infinite;
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: rotateY(60deg);
+}
+
+.atom-core {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  margin: -6px 0 0 -6px;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
