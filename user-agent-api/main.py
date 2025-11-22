@@ -56,6 +56,26 @@ class PreferencesOutput(BaseModel):
     participants: List[ParticipantPreferences]
 
 
+class QuestionGenerationRequest(BaseModel):
+    user_name: str
+    user_role: str
+    user_description: str
+
+
+class UpdatePreferencesRequest(BaseModel):
+    user_name: str
+    user_role: str
+    user_description: str
+    answers: List[Dict[str, Any]]
+
+
+class FinalizePreferencesRequest(BaseModel):
+    user_name: str
+    user_role: str
+    user_description: str
+    answers: List[Dict[str, Any]]
+
+
 async def call_openrouter(messages: List[Dict[str, str]], model: str = "anthropic/claude-3.5-sonnet") -> str:
     """Call OpenRouter API"""
     if not OPENROUTER_API_KEY:
@@ -225,6 +245,297 @@ async def format_output(preferences: PreferencesOutput):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error formatting output: {str(e)}")
+
+
+@app.post("/api/generate-questions")
+async def generate_questions(request: QuestionGenerationRequest):
+    """Generate contextual questions based on user input"""
+    try:
+        prompt = f"""You are generating questions to understand a user's policy preferences.
+
+User Information:
+- Name: {request.user_name}
+- Role: {request.user_role}
+- Description: {request.user_description}
+
+Generate 8-12 short, clear questions that help understand their preferences. Questions should be:
+- One sentence each
+- Focused on specific policy trade-offs
+- Relevant to their role and description
+- Similar to: "You'd accept a 10-story building on your block if it meant 20% lower rents"
+
+Output ONLY a JSON array of question strings:
+["question 1", "question 2", "question 3", ...]"""
+
+        messages = [
+            {"role": "system", "content": "You are a question generation system. Output only valid JSON arrays."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        response_text = await call_openrouter(messages, model="anthropic/claude-3.5-sonnet")
+        
+        # Parse JSON response
+        response_text = response_text.strip()
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+        
+        try:
+            questions = json.loads(response_text)
+            if not isinstance(questions, list):
+                questions = [questions] if questions else []
+        except json.JSONDecodeError:
+            # Fallback: try to extract questions from text
+            questions = [
+                "You'd accept a 10-story building on your block if it meant 20% lower rents",
+                "You care about the noise of the construction site",
+                "You care specifically about noise during the morning",
+                "Parking availability is important to you",
+                "You're willing to accept compensation for inconveniences",
+            ]
+        
+        return {"questions": questions}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating questions: {str(e)}")
+
+
+class GenerateNextQuestionRequest(BaseModel):
+    user_name: str
+    user_role: str
+    user_description: str
+    previous_answers: List[Dict[str, Any]]
+    current_preferences: Dict[str, Any]
+    question_count: int
+
+
+@app.post("/api/generate-next-question")
+async def generate_next_question(request: GenerateNextQuestionRequest):
+    """Generate the next question dynamically based on previous answers and current preferences"""
+    try:
+        # Build context from previous answers
+        answers_text = ""
+        if request.previous_answers:
+            answers_text = "\n".join([
+                f"Q: {ans.get('question', '')}\nA: {ans.get('answer', '')}"
+                for ans in request.previous_answers[-5:]  # Last 5 answers for context
+            ])
+        
+        preferences_text = ""
+        if request.current_preferences:
+            preferences_text = "\n".join([
+                f"- {key}: {value}"
+                for key, value in request.current_preferences.items()
+            ])
+        
+        prompt = f"""You are generating the NEXT question to understand a user's policy preferences.
+
+User Information:
+- Name: {request.user_name}
+- Role: {request.user_role}
+- Initial Description: {request.user_description}
+
+Previous Answers ({len(request.previous_answers)} answered so far):
+{answers_text if answers_text else "None yet"}
+
+Current Extracted Preferences:
+{preferences_text if preferences_text else "None yet"}
+
+Generate ONE new question that:
+1. Builds on what you've learned from previous answers
+2. Explores areas not yet covered
+3. Gets more specific based on their revealed preferences
+4. Helps extract concrete values (numbers, dates, constraints)
+5. Is relevant to their role: {request.user_role}
+
+The question should be:
+- One clear sentence
+- Focused on a specific policy trade-off or preference
+- Not repetitive of previous questions
+- Designed to extract a specific preference value if possible
+
+Examples:
+- "You'd accept a 10-story building on your block if it meant 20% lower rents"
+- "You care specifically about noise during the morning"
+- "What's the minimum compensation you'd accept for construction inconveniences?"
+
+Output ONLY the question as a plain string (no JSON, no quotes, just the question text).
+If you have enough information to extract all preferences, output: "COMPLETE" """
+
+        messages = [
+            {"role": "system", "content": "You are an adaptive question generation system. Generate one question at a time based on what you've learned."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        response_text = await call_openrouter(messages, model="anthropic/claude-3.5-sonnet")
+        response_text = response_text.strip()
+        
+        # Remove quotes if present
+        if response_text.startswith('"') and response_text.endswith('"'):
+            response_text = response_text[1:-1]
+        if response_text.startswith("'") and response_text.endswith("'"):
+            response_text = response_text[1:-1]
+        
+        # Check if AI says we're complete
+        if "COMPLETE" in response_text.upper() or request.question_count >= 12:
+            return {"complete": True, "question": None}
+        
+        return {"question": response_text, "complete": False}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating next question: {str(e)}")
+
+
+@app.post("/api/update-preferences")
+async def update_preferences(request: UpdatePreferencesRequest):
+    """Update preferences incrementally as user answers questions"""
+    try:
+        # Build context from user info and answers
+        answers_text = "\n".join([
+            f"Q: {ans.get('question', '')}\nA: {ans.get('answer', '')}"
+            for ans in request.answers
+        ])
+        
+        prompt = f"""Based on the user's initial description and their answers so far, extract their preferences.
+
+User: {request.user_name} ({request.user_role})
+Initial Description: {request.user_description}
+
+Answers so far:
+{answers_text}
+
+Extract preferences as key-value pairs. Use descriptive snake_case keys.
+Output ONLY JSON:
+{{"preferences": {{"key": value_or_null}}}}"""
+
+        messages = [
+            {"role": "system", "content": "You are a preference extraction system. Output only valid JSON."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        response_text = await call_openrouter(messages, model="anthropic/claude-3.5-sonnet")
+        
+        # Parse JSON
+        response_text = response_text.strip()
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+        
+        try:
+            extracted_data = json.loads(response_text)
+            preferences = extracted_data.get("preferences", {})
+        except json.JSONDecodeError:
+            preferences = {}
+        
+        # Log to console (backend side, not shown to user)
+        print(f"\n{'='*60}")
+        print(f"LIVE PREFERENCE UPDATE for {request.user_name} ({request.user_role})")
+        print(f"After {len(request.answers)} answers:")
+        for key, value in preferences.items():
+            if value is None:
+                print(f"  - {key}: None")
+            elif isinstance(value, (int, float)):
+                print(f"  - {key}: {float(value)}")
+            else:
+                print(f"  - {key}: {value}")
+        print(f"{'='*60}\n")
+        
+        return {
+            "preferences": preferences,
+            "participant_name": request.user_name,
+            "role": request.user_role
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating preferences: {str(e)}")
+
+
+@app.post("/api/finalize-preferences")
+async def finalize_preferences(request: FinalizePreferencesRequest):
+    """Finalize and format preferences after all questions are answered"""
+    try:
+        # Build full context
+        answers_text = "\n".join([
+            f"Q: {ans.get('question', '')}\nA: {ans.get('answer', '')}"
+            for ans in request.answers
+        ])
+        
+        prompt = f"""Extract the final, complete preferences from this user's input.
+
+User: {request.user_name} ({request.user_role})
+Initial Description: {request.user_description}
+
+All Answers:
+{answers_text}
+
+Extract ALL preferences mentioned. Be thorough and specific.
+- Use descriptive snake_case keys (e.g., "noise_level_below_db", "compensation_minimum")
+- Values: float for numbers, string for text/dates, None if mentioned but no value
+- Include all constraints, requirements, and priorities
+
+Output ONLY JSON:
+{{"preferences": {{"key": value_or_null}}}}"""
+
+        messages = [
+            {"role": "system", "content": "You are a preference extraction system. Output only valid JSON."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        response_text = await call_openrouter(messages, model="anthropic/claude-3.5-sonnet")
+        
+        # Parse JSON
+        response_text = response_text.strip()
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+        
+        try:
+            extracted_data = json.loads(response_text)
+            preferences = extracted_data.get("preferences", {})
+        except json.JSONDecodeError:
+            preferences = {}
+        
+        # Format output
+        participant_prefs = ParticipantPreferences(
+            participant_name=request.user_name,
+            role=request.user_role,
+            preferences=preferences
+        )
+        
+        output = PreferencesOutput(participants=[participant_prefs])
+        
+        # Format as string
+        output_lines = ["PARTICIPANTS:\n"]
+        output_lines.append(f"\n{participant_prefs.participant_name} ({participant_prefs.role}):\n")
+        for key, value in participant_prefs.preferences.items():
+            if value is None:
+                output_lines.append(f"  - {key}: None")
+            elif isinstance(value, (int, float)):
+                output_lines.append(f"  - {key}: {float(value)}")
+            else:
+                output_lines.append(f"  - {key}: {value}")
+        
+        formatted_output = "\n".join(output_lines)
+        
+        # Print final output (backend side)
+        print(f"\n{'='*60}")
+        print("FINAL PREFERENCES OUTPUT:")
+        print(formatted_output)
+        print(f"{'='*60}\n")
+        
+        return {
+            "participant_name": request.user_name,
+            "role": request.user_role,
+            "preferences": preferences,
+            "formatted_output": formatted_output,
+            "json_output": output.model_dump()
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error finalizing preferences: {str(e)}")
 
 
 if __name__ == "__main__":

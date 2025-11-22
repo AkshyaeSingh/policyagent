@@ -1,0 +1,101 @@
+.swipeable-questions {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.swipeable-questions.loading,
+.swipeable-questions.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: white;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: white;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.question-counter {
+  text-align: center;
+  color: white;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+.cards-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 20px 0;
+  min-height: 400px;
+}
+
+.generating-next {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+  min-height: 400px;
+}
+
+.generating-next .loading-spinner {
+  margin-bottom: 20px;
+}
+
+.swipe-hints {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.hint-left,
+.hint-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.7;
+}
+
+.hint-icon {
+  font-size: 1.5rem;
+}
+

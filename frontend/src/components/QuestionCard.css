@@ -1,0 +1,153 @@
+.question-card {
+  position: absolute;
+  width: 90%;
+  max-width: 350px;
+  height: 500px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.question-card:active {
+  cursor: grabbing;
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 20px;
+  justify-content: space-between;
+}
+
+.question-text {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.5;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.button-options button {
+  padding: 15px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.button-options button:active {
+  transform: scale(0.95);
+}
+
+.btn-disagree {
+  background: #ff6b6b;
+  color: white;
+}
+
+.btn-agree {
+  background: #51cf66;
+  color: white;
+}
+
+.btn-slider {
+  background: #667eea;
+  color: white;
+}
+
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #e0e0e0;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  border: none;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.slider-submit {
+  padding: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 10;
+  padding: 20px;
+  border-radius: 15px;
+  opacity: 0.9;
+}
+
+.swipe-indicator.swipe-right {
+  background: #51cf66;
+  color: white;
+}
+
+.swipe-indicator.swipe-left {
+  background: #ff6b6b;
+  color: white;
+}
+
