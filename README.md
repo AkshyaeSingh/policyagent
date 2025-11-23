@@ -1,4 +1,5 @@
-# Policy agent!
+# Coordinal
+## Fully Auditable Governance Layer for Policy Coordination to maintain individual agency and democratic control through a multi-agent stack. Billions of personal policy AIs , one for each person.
 
 ## The Core Problem
 Traditional governance suffers from:
