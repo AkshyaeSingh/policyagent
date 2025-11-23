@@ -3,10 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from typing import List, Tuple, Optional, Dict, Any
 from main import (
     DecentralizedAgent,
     NegotiationSpace,
     LLMClient,
+    Preference,
     create_demo_scenario,
     run_negotiation,
 )
@@ -16,6 +18,102 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI()
+
+def create_scenario_from_preferences(
+    user_prefs: Dict[str, Any],
+    llm: LLMClient
+) -> Tuple[DecentralizedAgent, List[DecentralizedAgent]]:
+    """
+    Create agents from received user preferences instead of demo data.
+
+    Args:
+        user_prefs: Dict with 'preferences', 'participant_name', 'role', etc.
+        llm: LLM client
+
+    Returns:
+        Tuple of (developer_agent, list_of_neighbor_agents)
+    """
+
+    # Extract user info
+    participant_name = user_prefs.get("participant_name", "User")
+    role = user_prefs.get("role", "neighbor")
+    pref_dict = user_prefs.get("preferences", {})
+
+    # Convert preference dict to Preference tuples
+    user_preferences: List[Preference] = [
+        (key, value) for key, value in pref_dict.items()
+    ]
+
+    print(f"\n{'='*60}")
+    print(f"Creating scenario from user preferences:")
+    print(f"Participant: {participant_name}")
+    print(f"Role: {role}")
+    print(f"Preferences count: {len(user_preferences)}")
+    print(f"{'='*60}\n")
+
+    # If user is a neighbor/stakeholder, create them as a neighbor
+    # and create a default policy maker
+    if role != "developer":
+        # Create the user as a neighbor agent
+        user_agent = DecentralizedAgent(
+            name=participant_name,
+            role="neighbor",
+            preferences=user_preferences,
+            llm=llm,
+            max_side_payment_budget=5000.0  # Default budget
+        )
+
+        # Create a default policy maker
+        policy_maker = DecentralizedAgent(
+            name="Policy_Maker",
+            role="developer",
+            preferences=[
+                ("total_budget_under", 50000000.0),
+                ("case_rate_target_below", 50.0),
+            ],
+            llm=llm,
+            max_side_payment_budget=0
+        )
+
+        # Return with user as one of the neighbors
+        return policy_maker, [user_agent]
+
+    else:
+        # User is the developer/policy maker
+        policy_maker = DecentralizedAgent(
+            name=participant_name,
+            role="developer",
+            preferences=user_preferences,
+            llm=llm,
+            max_side_payment_budget=0
+        )
+
+        # Create some default neighbors to negotiate with
+        default_neighbors = [
+            DecentralizedAgent(
+                name="Healthcare_Worker",
+                role="neighbor",
+                preferences=[
+                    ("min_mask_compliance_rate", 80.0),
+                    ("min_air_changes_per_hour", 6.0),
+                    ("max_acceptable_case_rate", 20.0),
+                ],
+                llm=llm,
+                max_side_payment_budget=5000.0
+            ),
+            DecentralizedAgent(
+                name="Business_Owner",
+                role="neighbor",
+                preferences=[
+                    ("max_capacity_reduction", 30.0),
+                    ("revenue_loss_tolerance", 20.0),
+                ],
+                llm=llm,
+                max_side_payment_budget=3000.0
+            ),
+        ]
+
+        return policy_maker, default_neighbors
 
 # CORS middleware
 app.add_middleware(
@@ -38,16 +136,24 @@ async def websocket_negotiate(websocket: WebSocket):
     try:
         # Receive preferences from frontend
         data = await websocket.receive_text()
-        preferences = json.loads(data)
+        user_preferences = json.loads(data)
 
-        await websocket.send_text(json.dumps({"type": "status", "message": "Received preferences, starting negotiation..."}))
+        # If no preferences provided, use demo scenario
+        if not user_preferences or "preferences" not in user_preferences or not user_preferences.get("preferences"):
+            await websocket.send_text(json.dumps({"type": "status", "message": "No preferences provided, using demo scenario..."}))
+            api_key = os.environ.get("OPENROUTER_API_KEY")
+            llm = LLMClient(api_key, model="google/gemini-2.5-flash-preview-09-2025")
+            policy_maker, stakeholders = create_demo_scenario(llm, llm)
+        else:
+            await websocket.send_text(json.dumps({"type": "status", "message": f"Received preferences for {user_preferences.get('participant_name', 'User')}, starting negotiation..."}))
 
-        # Setup LLM
-        api_key = os.environ.get("OPENROUTER_API_KEY")
-        llm = LLMClient(api_key, model="google/gemini-2.5-flash-preview-09-2025")
+            # Setup LLM
+            api_key = os.environ.get("OPENROUTER_API_KEY")
+            llm = LLMClient(api_key, model="google/gemini-2.5-flash-preview-09-2025")
 
-        # Create demo scenario (for now, keep using demo data)
-        policy_maker, stakeholders = create_demo_scenario(llm, llm)
+            # Create scenario from actual user preferences
+            policy_maker, stakeholders = create_scenario_from_preferences(user_preferences, llm)
+
         space = NegotiationSpace()
 
         # Capture the event loop BEFORE starting threads

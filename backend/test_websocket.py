@@ -13,9 +13,19 @@ async def test_websocket():
     try:
         print(f"Connecting to {uri}...")
         async with websockets.connect(uri) as websocket:
-            # Send empty preferences (will use demo data)
-            print("Sending preferences...")
-            await websocket.send(json.dumps({}))
+            # Send real preferences
+            print("Sending user preferences...")
+            preferences = {
+                "participant_name": "Healthcare_Worker_Test",
+                "role": "neighbor",
+                "preferences": {
+                    "min_mask_compliance_rate": 85.0,
+                    "min_air_changes_per_hour": 8.0,
+                    "max_acceptable_case_rate": 15.0,
+                    "priority_medical_access": True,
+                }
+            }
+            await websocket.send(json.dumps(preferences))
 
             # Receive updates
             print("\n=== WebSocket Connection Successful ===\n")
