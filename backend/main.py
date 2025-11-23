@@ -13,6 +13,7 @@ from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
+from typing import Callable
 
 load_dotenv()
 
@@ -1161,14 +1162,25 @@ def run_negotiation(
     developer: DecentralizedAgent,
     neighbors: List[DecentralizedAgent],
     space: NegotiationSpace,
-    max_rounds: int = 7
+    max_rounds: int = 7,
+    on_update: Optional[Callable[[Dict[str, Any]], None]] = None
 ) -> Optional[Proposal]:
     """
     Run the decentralized negotiation process
 
     Key: NO CENTRAL COORDINATOR
     Each agent operates autonomously, coordinating through shared bulletin board
+
+    Args:
+        on_update: Optional callback function that receives update dicts with:
+                   - type: "round_start", "score", "round_complete", "proposal", "complete", "failed"
+                   - Additional fields depending on type
     """
+
+    def send_update(update: Dict[str, Any]):
+        """Helper to send update via callback if provided"""
+        if on_update:
+            on_update(update)
 
     print("=" * 80)
     print("COASEAN MULTI-DIMENSIONAL NEGOTIATION")
@@ -1215,6 +1227,11 @@ def run_negotiation(
     for round_num in range(max_rounds):
         space.advance_round()
 
+        send_update({
+            "type": "round_start",
+            "round": space.current_round
+        })
+
         print(f"\n{'=' * 80}")
         print(f"ROUND {space.current_round}: DECENTRALIZED EVALUATION")
         print(f"{'=' * 80}")
@@ -1254,14 +1271,42 @@ def run_negotiation(
                         print(f"   Suggests: {eval_result.suggested_changes[0]}")
                 print()
 
+                # Send score update
+                send_update({
+                    "type": "score",
+                    "round": space.current_round,
+                    "agent": neighbor.name,
+                    "score": score,
+                    "explanation": eval_result.explanation,
+                    "suggestions": eval_result.suggested_changes
+                })
+
             # Wait for developer evaluation to complete
             dev_eval = dev_future.result()
+
+        # Send developer score
+        send_update({
+            "type": "score",
+            "round": space.current_round,
+            "agent": developer.name,
+            "score": dev_eval.satisfaction_score,
+            "explanation": dev_eval.explanation,
+            "suggestions": dev_eval.suggested_changes
+        })
 
         # Calculate average and check success
         all_scores = neighbor_scores + [dev_eval.satisfaction_score]
         avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
         print(f"\n   Average satisfaction: {avg_score:.1f}/5")
         print(f"   Developer: {dev_eval.satisfaction_score}/5\n")
+
+        # Send round complete
+        send_update({
+            "type": "round_complete",
+            "round": space.current_round,
+            "average_score": avg_score,
+            "scores": {name: score for name, score in zip([n.name for n in neighbors] + [developer.name], all_scores)}
+        })
 
         # Check for regression (drop > 0.2 in average satisfaction)
         if space.current_round > 1 and (prev_avg_satisfaction - avg_score) > 0.2:
@@ -1271,6 +1316,11 @@ def run_negotiation(
             print(f"   Current round avg: {avg_score:.1f}/5")
             print(f"   Drop: {prev_avg_satisfaction - avg_score:.1f} (threshold: 0.2)")
             print(f"{'=' * 80}")
+            send_update({
+                "type": "failed",
+                "reason": "regression_detected",
+                "message": f"Satisfaction dropped from {prev_avg_satisfaction:.1f} to {avg_score:.1f}"
+            })
             return None
 
         prev_avg_satisfaction = avg_score
@@ -1283,6 +1333,12 @@ def run_negotiation(
             print(f"\n{'=' * 80}")
             print("✓ SUCCESS! All parties satisfied through decentralized coordination")
             print(f"{'=' * 80}")
+            send_update({
+                "type": "complete",
+                "status": "success",
+                "message": "All parties satisfied",
+                "final_average_score": avg_score
+            })
             return current_proposal
 
         # If not all satisfied, check for Pareto optimality
@@ -1303,6 +1359,12 @@ def run_negotiation(
                 print(f"\n{'=' * 80}")
                 print("NEGOTIATION COMPLETE - Pareto Optimal Agreement Reached")
                 print(f"{'=' * 80}")
+                send_update({
+                    "type": "complete",
+                    "status": "pareto_optimal",
+                    "message": "Pareto optimal agreement reached",
+                    "final_average_score": avg_score
+                })
                 return current_proposal
 
             print("\n→ Continuing to synthesis phase...")
@@ -1335,6 +1397,11 @@ def run_negotiation(
                 print("\n✗ NEGOTIATION FAILED - Side payments exceed agent budgets!")
                 print("   The LLM proposed payments that agents cannot afford.")
                 print("   (Agents only have the budgets humans set for them)")
+                send_update({
+                    "type": "failed",
+                    "reason": "invalid_side_payments",
+                    "message": "Side payment budgets exceeded"
+                })
                 return None
 
         print("IMPROVED PROPOSAL:")
@@ -1342,7 +1409,22 @@ def run_negotiation(
         if current_proposal.reasoning:
             print(f"\nReasoning: {current_proposal.reasoning}")
 
+        # Send proposal update
+        send_update({
+            "type": "proposal",
+            "round": space.current_round,
+            "base_project": current_proposal.base_project,
+            "modifications_count": len(current_proposal.modifications),
+            "total_cost": current_proposal.total_cost,
+            "reasoning": current_proposal.reasoning
+        })
+
     print("\n✗ Max rounds reached without unanimous agreement")
+    send_update({
+        "type": "failed",
+        "reason": "max_rounds_reached",
+        "message": f"Could not reach agreement in {max_rounds} rounds"
+    })
     return None
 
 
