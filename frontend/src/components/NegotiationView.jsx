@@ -12,7 +12,7 @@ export default function NegotiationView({ preferences }) {
   useEffect(() => {
     if (!preferences) return;
 
-    const ws = new WebSocket('ws://localhost:8000/ws/negotiate');
+    const ws = new WebSocket('ws://localhost:8002/ws/negotiate');
 
     ws.onopen = () => {
       console.log('Connected to negotiation server');

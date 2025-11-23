@@ -8,7 +8,7 @@ import websockets
 import sys
 
 async def test_websocket():
-    uri = "ws://localhost:8000/ws/negotiate"
+    uri = "ws://localhost:8002/ws/negotiate"
 
     try:
         print(f"Connecting to {uri}...")

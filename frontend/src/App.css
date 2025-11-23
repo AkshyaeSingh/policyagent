@@ -61,7 +61,69 @@ body {
   opacity: 0.9;
 }
 
+.complete-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 300px;
+}
+
 .complete-screen button {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+  width: 100%;
+}
+
+.complete-screen .primary-button {
+  background: white;
+  color: #000;
+}
+
+.complete-screen .primary-button:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.complete-screen .secondary-button {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+}
+
+.complete-screen .secondary-button:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.negotiation-redirect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  color: white;
+  text-align: center;
+}
+
+.negotiation-redirect h1 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.negotiation-redirect p {
+  font-size: 1.1rem;
+  margin-bottom: 30px;
+  opacity: 0.9;
+}
+
+.negotiation-redirect button {
   padding: 15px 30px;
   background: white;
   color: #000;
@@ -73,7 +135,7 @@ body {
   transition: transform 0.2s;
 }
 
-.complete-screen button:active {
+.negotiation-redirect button:active {
   transform: scale(0.95);
 }
 

@@ -127,7 +127,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Backend Negotiation WebSocket API", "status": "running"}
+    return {"message": "Backend Negotiation WebSocket API", "status": "running", "port": 8002}
 
 
 @app.websocket("/ws/negotiate")
@@ -235,4 +235,4 @@ async def websocket_negotiate(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8002)
