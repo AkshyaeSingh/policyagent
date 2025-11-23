@@ -9,7 +9,7 @@ function SplashScreen({ onComplete }) {
 
   useEffect(() => {
     let currentIndex = 0
-    const typingSpeed = 30 // milliseconds per character
+    const typingSpeed = 10 // milliseconds per character (much faster)
 
     const typeWriter = () => {
       if (currentIndex < fullText.length) {

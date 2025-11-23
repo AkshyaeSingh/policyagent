@@ -94,59 +94,75 @@ function Question2SafetyTrade({ onAnswer }) {
     <div
       ref={cardRef}
       className="question-card safety-trade-question"
-      style={{
-        transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg)`,
-        transition: startPos ? 'none' : 'transform 0.3s ease',
-        opacity: hasSwiped ? 0 : 1,
-      }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
       <div className="question-header">
         <h2 className="question-title">The Safety Investment Trade</h2>
         <p className="question-subtitle">
-          Would you rather invest $10,000 in HEPA filters and UV systems to operate at 75% capacity, OR operate at 40% capacity with basic masks required?
+          Would you rather: <strong>A</strong> - Invest $10,000 in HEPA filters and UV systems to operate at 75% capacity, <strong>B</strong> - Operate at 40% capacity with basic masks required?
         </p>
       </div>
 
-      <div className="split-screen">
-        <div className={`option-panel option-a ${selectedOption === 'option_a' ? 'selected' : ''}`}>
-          <div className="option-label">Option A</div>
-          <div className="option-title">High Investment, More Freedom</div>
-          <div className="option-details">
-            <p>• $10,000 investment</p>
-            <p>• HEPA filters + UV systems</p>
-            <p>• 75% capacity</p>
+      <div className="split-screen-horizontal">
+        <div 
+          className={`option-panel option-a ${selectedOption === 'option_a' ? 'selected' : ''}`}
+          onClick={() => {
+            setSelectedOption('option_a')
+            setTimeout(() => setShowFollowUp(true), 500)
+          }}
+        >
+          <div className="option-image-container">
+            <img 
+              src="/images/17.33.png" 
+              alt="Option A" 
+              className="option-image"
+              onError={(e) => {
+                e.target.style.display = 'none'
+              }}
+            />
+            <div className="option-label-overlay">A</div>
+          </div>
+          <div className="option-content">
+            <div className="option-title">High Investment, More Freedom</div>
+            <div className="option-details">
+              <p>• $10,000 investment</p>
+              <p>• HEPA filters + UV systems</p>
+              <p>• 75% capacity</p>
+            </div>
           </div>
         </div>
 
-        <div className="divider">VS</div>
-
-        <div className={`option-panel option-b ${selectedOption === 'option_b' ? 'selected' : ''}`}>
-          <div className="option-label">Option B</div>
-          <div className="option-title">Low Investment, Strict Limits</div>
-          <div className="option-details">
-            <p>• No investment</p>
-            <p>• Basic masks required</p>
-            <p>• 40% capacity</p>
+        <div 
+          className={`option-panel option-b ${selectedOption === 'option_b' ? 'selected' : ''}`}
+          onClick={() => {
+            setSelectedOption('option_b')
+            setTimeout(() => setShowFollowUp(true), 500)
+          }}
+        >
+          <div className="option-image-container">
+            <img 
+              src="/images/17.10.png" 
+              alt="Option B" 
+              className="option-image"
+              onError={(e) => {
+                e.target.style.display = 'none'
+              }}
+            />
+            <div className="option-label-overlay">B</div>
+          </div>
+          <div className="option-content">
+            <div className="option-title">Low Investment, Strict Limits</div>
+            <div className="option-details">
+              <p>• No investment</p>
+              <p>• Basic masks required</p>
+              <p>• 40% capacity</p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="swipe-hint">
-        Swipe left for Option A, right for Option B
+        Tap Option A or B to select
       </div>
-
-      {Math.abs(position.x) > 50 && (
-        <div className={`swipe-indicator ${position.x > 0 ? 'swipe-right' : 'swipe-left'}`}>
-          {position.x > 0 ? '✓ Option B' : '✓ Option A'}
-        </div>
-      )}
     </div>
   )
 }

@@ -52,6 +52,15 @@ function Question1Survival({ onAnswer }) {
       </div>
 
       <div className="restaurant-visual">
+        <img 
+          src="/images/4.11.07pm-ss.png" 
+          alt="Restaurant" 
+          className="restaurant-image"
+          onError={(e) => {
+            // Fallback if image doesn't exist
+            e.target.style.display = 'none'
+          }}
+        />
         <div className="capacity-overlay" style={{ height: `${100 - capacity}%` }}></div>
         <div className="restaurant-label">Your Restaurant</div>
       </div>

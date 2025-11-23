@@ -3,6 +3,7 @@
   width: 120px;
   height: 120px;
   margin: 0 auto;
+  animation: float 6s ease-in-out infinite;
 }
 
 .atom-ring {
@@ -18,7 +19,7 @@
   width: 100px;
   height: 100px;
   margin: -50px 0 0 -50px;
-  animation: rotate 8s linear infinite;
+  animation: rotate 20s linear infinite, pulse-ring 4s ease-in-out infinite;
   border-color: rgba(255, 255, 255, 0.8);
 }
 
@@ -26,7 +27,7 @@
   width: 80px;
   height: 80px;
   margin: -40px 0 0 -40px;
-  animation: rotate 6s linear infinite reverse;
+  animation: rotate 15s linear infinite reverse, pulse-ring 5s ease-in-out infinite 0.5s;
   border-color: rgba(255, 255, 255, 0.6);
   transform: rotateX(60deg);
 }
@@ -35,7 +36,7 @@
   width: 60px;
   height: 60px;
   margin: -30px 0 0 -30px;
-  animation: rotate 10s linear infinite;
+  animation: rotate 25s linear infinite, pulse-ring 6s ease-in-out infinite 1s;
   border-color: rgba(255, 255, 255, 0.4);
   transform: rotateY(60deg);
 }
@@ -50,6 +51,7 @@
   left: 50%;
   margin: -6px 0 0 -6px;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+  animation: pulse-core 3s ease-in-out infinite, glow 2s ease-in-out infinite alternate;
 }
 
 @keyframes rotate {
@@ -58,6 +60,44 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-ring {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes pulse-core {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+  }
+  to {
+    box-shadow: 0 0 30px rgba(255, 255, 255, 1), 0 0 40px rgba(255, 255, 255, 0.6);
   }
 }
 
